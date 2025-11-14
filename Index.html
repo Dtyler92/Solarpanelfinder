@@ -148,4 +148,146 @@
         <input type="email" id="email" placeholder="Email Address">
         <div class="btn-group">
             <button onclick="selectPreference('virtual')">Virtual Call</button>
-            <button onclick
+            <button onclick="selectPreference('inperson')">In-Person Visit</button>
+        </div>
+    </div>
+
+    <!-- THANK YOU -->
+    <div id="thankyou" class="section thankyou" data-step="6">
+        <div class="check-icon">Checkmark</div>
+        <h2>Thank You, <span id="user-name"></span>!</h2>
+        <div class="savings" id="savings-text"></div>
+        <p>We’ll contact you soon to schedule your <strong><span id="appt-type"></span></strong> appointment.</p>
+        <p style="margin-top:24px; font-size:0.9rem; color:var(--gray);">
+            Questions? Email <a href="mailto:support@thinkenergy.com" style="color:var(--primary);">support@thinkenergy.com</a>
+        </p>
+    </div>
+</div>
+
+<script>
+    const NREL_KEY = '3JfgeN3zS7bwbacaGq8hRiFgIy10vCwif1cTJJ6Z';  // Your real key
+    let map, marker;
+    const data = {};
+    const totalSteps = 6;
+
+    function initMap() {}
+
+    function updateProgress(step) {
+        const percent = (step / totalSteps) * 100;
+        document.getElementById('progress').style.width = percent + '%';
+    }
+
+    function hideAll() {
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    }
+
+    async function submitZip() {
+        const zip = document.getElementById('zip').value.trim();
+        if (!/^\d{5}$/.test(zip)) return alert('Please enter a valid 5-digit zip code.');
+
+        data.zip = zip;
+        updateProgress(1);
+
+        const geo = await fetch(`https://nominatim.openstreetmap.org/search?postalcode=${zip}&country=US&format=json&limit=1`)
+                         .then(r => r.json());
+        if (!geo.length) return alert('Zip code not found.');
+
+        const {lat, lon} = geo[0];
+        data.lat = lat; data.lon = lon;
+
+        const nrel = await fetch(`https://developer.nrel.gov/api/utility_rates/v3.json?api_key=${NREL_KEY}&lat=${lat}&lon=${lon}`)
+                          .then(r => r.json());
+
+        const provider = nrel.outputs?.utility_name || 'Local Utility';
+        document.getElementById('provider').textContent = `Provider: ${provider}`;
+        data.provider = provider;
+
+        document.getElementById('bill-section').style.display = 'block';
+
+        const slider = document.getElementById('bill');
+        const val = document.getElementById('bill-value');
+        val.textContent = slider.value;
+        slider.oninput = () => val.textContent = slider.value;
+
+        // Estimate savings: 20% off bill
+        data.monthlyBill = slider.value;
+        data.yearlySavings = Math.round(slider.value * 12 * 0.20);
+    }
+
+    function selectType(type) {
+        data.bill = document.getElementById('bill').value;
+        data.type = type;
+        hideAll();
+        const next = type === 'renter' ? 'renter-section' : 'owner-address';
+        document.getElementById(next).classList.add('active');
+        updateProgress(type === 'renter' ? 5 : 2); // renter skips to end
+    }
+
+    async function showSatelliteMap() {
+        const address = document.getElementById('address').value.trim();
+        if (!address) return alert('Please enter your address.');
+
+        data.address = address;
+
+        const geo = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`)
+                         .then(r => r.json());
+        if (!geo.length) return alert('Address not found.');
+
+        const lat = parseFloat(geo[0].lat);
+        const lon = parseFloat(geo[0].lon);
+        data.lat = lat; data.lon = lon;
+
+        hideAll();
+        document.getElementById('satellite-section').classList.add('active');
+        updateProgress(4);
+
+        map = new google.maps.Map(document.getElementById('map'), {
+            center: {lat, lng: lon}, zoom: 19, mapTypeId: 'satellite'
+        });
+
+        marker = new google.maps.Marker({
+            position: {lat, lng: lon}, map, draggable: true
+        });
+
+        marker.addListener('dragend', () => {
+            const p = marker.getPosition();
+            data.lat = p.lat(); data.lon = p.lng();
+        });
+    }
+
+    function confirmLocation() {
+        hideAll();
+        document.getElementById('contact-section').classList.add('active');
+        updateProgress(5);
+    }
+
+    function selectPreference(pref) {
+        data.name = document.getElementById('name').value.trim();
+        data.phone = document.getElementById('phone').value.trim();
+        data.email = document.getElementById('email').value.trim();
+        data.preference = pref;
+
+        if (!data.name || !data.phone || !data.email) {
+            return alert('Please fill in all contact fields.');
+        }
+
+        // Finalize
+        document.getElementById('user-name').textContent = data.name.split(' ')[0];
+        document.getElementById('appt-type').textContent = pref === 'virtual' ? 'virtual call' : 'in-person visit';
+        document.getElementById('savings-text').textContent = 
+            `You could save ~$${data.yearlySavings.toLocaleString()}/year by switching or going solar!`;
+
+        hideAll();
+        document.getElementById('thankyou').classList.add('active');
+        updateProgress(6);
+
+        console.log('LEAD SUBMITTED →',  data);
+        // Add Formspree / Google Sheets here later
+    }
+
+    // Init
+    updateProgress(1);
+</script>
+
+</body>
+</html>
