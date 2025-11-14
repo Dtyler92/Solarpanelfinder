@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Energy Savings Survey</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBd9XeisWiNIm3Zm8GjqH-Rvz1fh9DB50I&callback=initMap"></script>
+    <style>
+        :root {--primary:#2563eb;--primary-light:#3b82f6;--success:#10b981;--gray:#6b7280;--light:#f3f4f6;--dark:#1f2937;--radius:12px;--shadow:0 4px 6px -1px rgba(0,0,0,0.1);}
+        *{box-sizing:border-box;margin:0;padding:0;}
+        body{font-family:'Inter',sans-serif;background:linear-gradient(135deg,#f0f9ff 0%,#e0f2fe 100%);color:var(--dark);min-height:100vh;padding:20px;}
+        .container{max-width:600px;margin:40px auto;background:white;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+        .progress-bar{height:6px;background:#e5e7eb;position:relative;}
+        .progress{height:100%;background:var(--primary);width:0%;transition:width .4s ease;}
+        .section{display:none;padding:32px;animation:fadeIn .4s ease-out;}
+        .active{display:block;}
+        h2{font-size:1.75rem;font-weight:600;margin-bottom:16px;color:var(--dark);}
+        p{margin-bottom:16px;color:var(--gray);}
+        input[type=text],input[type=tel],input[type=email]{width:100%;padding:12px 16px;border:1px solid #d1d5db;border-radius:8px;font-size:1rem;margin-bottom:16px;transition:border .2s;}
+        input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,0.1);}
+        button{background:var(--primary);color:white;border:none;padding:12px 24px;font-size:1rem;font-weight:500;border-radius:8px;cursor:pointer;transition:background .2s;margin-right:12px;margin-bottom:12px;}
+        button:hover{background:var(--primary-light);}
+        .btn-group{display:flex;gap:12px;flex-wrap:wrap;}
+        #bill-section{background:#f8fafc;padding:20px;border-radius:8px;margin:20px 0;}
+        #map{height:400px;width:100%;border-radius:8px;margin:16px 0;}
+        .slider-container{display:flex;align-items:center;gap:12px;margin:16px 0;}
+        input[type=range]{flex:1;height:8px;border-radius:4px;background:#e5e7eb;}
+        input[type=range]::-webkit-slider-thumb{appearance:none;width:20px;height:20px;background:var(--primary);border-radius:50%;cursor:pointer;}
+        .youtube-container{position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:8px;margin:20px 0;box-shadow:var(--shadow);}
+        .youtube-container iframe{position:absolute;top:0;left:0;width:100%;height:100%;}
+        .thankyou{text-align:center;padding:48px 32px;}
+        .thankyou h2{color:var(--success);font-size:2.25rem;margin-bottom:16px;}
+        .check-icon{width:80px;height:80px;background:var(--success);color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 24px;font-size:2.5rem;}
+        .savings{background:#ecfdf5;padding:16px;border-radius:8px;margin:20px 0;font-weight:600;color:var(--success);}
+        @keyframes fadeIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+        @media(max-width:480px){.container{margin:20px 10px;}.btn-group{flex-direction:column;}button{width:100%;}}
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="progress-bar"><div class="progress" id="progress"></div></div>
+
+    <div id="section1" class="section active" data-step="1">
+        <h2>Enter Your Zip Code</h2>
+        <p>We’ll find your provider and estimate savings.</p>
+        <input type="text" id="zip" placeholder="e.g. 90210" maxlength="5">
+        <button onclick="submitZip()">Continue</button>
+        <p id="provider" style="font-weight:500;color:var(--primary);"></p>
+        <div id="bill-section" style="display:none;">
+            <h3>Average Monthly Bill</h3>
+            <div class="slider-container">
+                <input type="range" id="bill" min="50" max="500" value="150" step="10">
+                <span id="bill-value" style="font-weight:600;color:var(--primary);">150</span> USD
+            </div>
+            <div class="btn-group">
+                <button onclick="selectType('renter')">I’m a Renter</button>
+                <button onclick="selectType('owner')">I’m a Homeowner</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="renter-section" class="section" data-step="2">
+        <h2>Great! Here’s How It Works</h2>
+        <div class="youtube-container">
+            <iframe src="https://www.youtube.com/embed/3u5DALLHZDI?si=nORXUVcpWtIYAAQF" frameborder="0" allowfullscreen></iframe>
+        </div>
+        <p style="text-align:center;">
+            <a href="https://get.thinkenergy.com/Tourbillon" target="_blank" style="color:var(--primary);font-weight:500;">Explore Think Energy</a>
+        </p>
+    </div>
+
+    <div id="owner-address" class="section" data-step="3">
+        <h2>Confirm Your Home</h2>
+        <p>Enter your full address to view your property.</p>
+        <input type="text" id="address" placeholder="123 Main St, Austin, TX">
+        <button onclick="showSatelliteMap()">Show My Home</button>
+    </div>
+
+    <div id="satellite-section" class="section" data-step="4">
+        <h2>Is This Your Home?</h2>
+        <p>Drag the pin if it’s slightly off.</p>
+        <div id="map"></div>
+        <button onclick="confirmLocation()">Yes, Confirm</button>
+    </div>
+
+    <div id="contact-section" class="section" data-step="5">
+        <h2>Almost Done!</h2>
+        <p>Schedule a free consultation.</p>
+        <input type="text" id="name" placeholder="Full Name">
+        <input type="tel" id="phone" placeholder="Phone Number">
+        <input type="email" id="email" placeholder="Email Address">
+        <div class="btn-group">
+            <button onclick="selectPreference('virtual')">Virtual Call</button>
+            <button onclick="selectPreference('inperson')">In-Person Visit</button>
+        </div>
+    </div>
+
+    <div id="thankyou" class="section thankyou" data-step="6">
+        <div class="check-icon">Checkmark</div>
+        <h2>Thank You, <span id="user-name"></span>!</h2>
+        <div class="savings" id="savings-text"></div>
+        <p>We’ll contact you soon to schedule your <strong><span id="appt-type"></span></strong> appointment.</p>
+        <p style="margin-top:24px;font-size:0.9rem;color:var(--gray);">
+            Questions? Email <a href="mailto:support@thinkenergy.com" style="color:var(--primary);">support@thinkenergy.com</a>
+        </p>
+    </div>
+</div>
+
+<script>
+    const NREL_KEY = '3JfgeN3zS7bwbacaGq8hRiFgIy10vCwif1cTJJ6Z';
+    let map, marker;
+    const data = {};
+    const totalSteps = 6;
+
+    function initMap() {}
+    function updateProgress(step) {
+        const percent = (step / totalSteps) * 100;
+        document.getElementById('progress').style.width = percent + '%';
+    }
+    function hideAll() {
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    }
+
+    async function submitZip() {
+        const zip = document.getElementById('zip').value.trim();
+        if (!/^\d{5}$/.test(zip)) return alert('Enter a valid 5-digit zip code.');
+        data.zip = zip; updateProgress(1);
+
+        const geo = await fetch(`https://nominatim.openstreetmap.org/search?postalcode=${zip}&country=US&format=json&limit=1`).then(r => r.json());
+        if (!geo.length) return alert('Zip not found.');
+
+        const {lat, lon} = geo[0];
+        data.lat = lat; data.lon = lon;
+
+        const nrel = await fetch(`https://developer.nrel.gov/api/utility_rates/v3.json?api_key=${NREL_KEY}&lat=${lat}&lon=${lon}`).then(r => r.json());
+        const provider = nrel.outputs?.utility_name || 'Local Utility';
+        document.getElementById('provider').textContent = `Provider: ${provider}`;
+        data.provider = provider;
+
+        document.getElementById('bill-section').style.display = 'block';
+        const slider = document.getElementById('bill');
+        const val = document.getElementById('bill-value');
+        val.textContent = slider.value;
+        slider.oninput = () => val.textContent = slider.value;
+
+        data.monthlyBill = slider.value;
+        data.yearlySavings = Math.round(slider.value * 12 * 0.20);
+    }
+
+    function selectType(type) {
+        data.bill = document.getElementById('bill').value;
+        data.type = type;
+        hideAll();
+        const next = type === 'renter' ? 'renter-section' : 'owner-address';
+        document.getElementById(next).classList.add('active');
+        updateProgress(type === 'renter' ? 5 : 2);
+    }
+
+    async function showSatelliteMap() {
+        const address = document.getElementById('address').value.trim();
+        if (!address) return alert('Enter your address.');
+        data.address = address;
+
+        const geo = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`).then(r => r.json());
+        if (!geo.length) return alert('Address not found.');
+
+        const lat = parseFloat(geo[0].lat);
+        const lon = parseFloat(geo[0].lon);
+        data.lat = lat; data.lon = lon;
+
+        hideAll();
+        document.getElementById('satellite-section').classList.add('active');
+        updateProgress(4);
+
+        map = new google.maps.Map(document.getElementById('map'), {center:{lat,lng:lon},zoom:19,mapTypeId:'satellite'});
+        marker = new google.maps.Marker({position:{lat,lng:lon},map,draggable:true});
+        marker.addListener('dragend', () => {
+            const p = marker.getPosition();
+            data.lat = p.lat(); data.lon = p.lng();
+        });
+    }
+
+    function confirmLocation() {
+        hideAll();
+        document.getElementById('contact-section').classList.add('active');
+        updateProgress(5);
+    }
+
+    function selectPreference(pref) {
+        data.name = document.getElementById('name').value.trim();
+        data.phone = document.getElementById('phone').value.trim();
+        data.email = document.getElementById('email').value.trim();
+        data.preference = pref;
+
+        if (!data.name || !data.phone || !data.email) return alert('Fill in all contact fields.');
+
+        document.getElementById('user-name').textContent = data.name.split(' ')[0];
+        document.getElementById('appt-type').textContent = pref === 'virtual' ? 'virtual call' : 'in-person visit';
+        document.getElementById('savings-text').textContent = `You could save ~$${data.yearlySavings.toLocaleString()}/year!`;
+
+        hideAll();
+        document.getElementById('thankyou').classList.add('active');
+        updateProgress(6);
+
+        console.log('LEAD:', data);
+    }
+
+    updateProgress(1);
+</script>
+</body>
+</html>
